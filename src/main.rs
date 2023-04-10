@@ -1,179 +1,107 @@
 #![warn(clippy::all, clippy::nursery)]
-use std::fmt::Display;
 
-use anyhow::{Context, Result};
-use chrono::{Datelike, NaiveDate};
+use std::ops::RangeInclusive;
+
+use clap::{Args, Parser, Subcommand};
+use payment::{payments_to_file, Payments};
 use rust_decimal::Decimal;
-use serde::Deserialize;
 
-#[derive(Debug, Deserialize)]
-pub struct Payment {
-    name: String,
-    amount: Decimal,
-    day_paid: isize,
+mod payment;
+mod utils;
+
+use anyhow::anyhow;
+
+use crate::payment::{payments_from_file, PaymentManager};
+
+const FILE_NAME: &str = "spend.yml";
+
+#[derive(Parser)]
+struct App {
+    #[command(subcommand)]
+    command: Commands,
 }
 
-impl Payment {
-    pub const fn new(name: String, amount: Decimal, day_paid: isize) -> Self {
-        Self {
-            name,
-            amount,
-            day_paid,
-        }
-    }
+#[derive(Subcommand)]
+enum Commands {
+    Compute { balance: Decimal },
+    Adjust(AdjustArgs),
 }
 
-impl Display for Payment {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Bill: {}\nAmount: £{}\nDay paid: {}",
-            self.name, self.amount, self.day_paid
-        )
-    }
-}
-
-pub type Payments = Vec<Payment>;
-
-pub const fn modulo(a: isize, b: isize) -> isize {
-    ((a % b) + b) % b
-}
-
-pub const fn days_in_month(month: u32) -> isize {
-    match month {
-        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-        2 => 28,
-        _ => 30,
-    }
-}
-
-#[derive(Debug)]
-pub struct PaymentManager {
-    balance: Decimal,
-    reset_day: isize,
-    payments: Payments,
-}
-
-impl PaymentManager {
-    pub fn new(balance: Decimal, reset_day: isize, payments: Payments) -> Self {
-        Self {
-            balance,
-            reset_day,
-            payments,
-        }
-    }
-
-    fn remaining_balance(&self, current_day: NaiveDate) -> Decimal {
-        let rd = self.reset_day;
-        let day = current_day.day() as isize;
-        let days_in_month = days_in_month(current_day.month());
-
-        let rebased_cd = modulo(day - rd, days_in_month);
-
-        let leftover_payments: Decimal = self
-            .payments
-            .iter()
-            .map(|p| (p.amount, modulo(p.day_paid - rd, days_in_month)))
-            .filter(|p| p.1 > rebased_cd)
-            .map(|p| p.0)
-            .sum();
-
-        self.balance - leftover_payments
-    }
-}
-
-fn main() -> Result<()> {
-    let balance = std::env::args().nth(1).context("No argument provided")?;
-    let balance =
-        Decimal::from_str_exact(&balance).context("Couldn't parse balance into Decimal")?;
+fn compute_balance(balance: Decimal, payments: Payments) -> Decimal {
     let reset_day: isize = 18;
-
-    let payments = std::fs::read_to_string("spend.yml")?;
-    let payments: Payments = serde_yaml::from_str(&payments)?;
 
     let payment_manager = PaymentManager::new(balance, reset_day, payments);
 
     let current_day = chrono::Utc::now().date_naive();
 
-    println!("£{}", payment_manager.remaining_balance(current_day));
-    Ok(())
+    payment_manager.remaining_balance(current_day)
 }
 
-#[cfg(test)]
-mod tests {
-    use std::str::FromStr;
+#[derive(Args)]
+struct AdjustArgs {
+    name: String,
+    #[arg(short, long, value_parser = amount_validation)]
+    amount: Option<Decimal>,
+    #[arg(short, long, value_parser = days_paid_in_range)]
+    day_paid: Option<isize>,
+}
 
-    use rust_decimal::Decimal;
+const DAYS_PAID_RANGE: RangeInclusive<isize> = 1..=28;
 
-    use super::*;
+fn days_paid_in_range(s: &str) -> Result<isize, String> {
+    let days_paid: isize = s.parse().map_err(|_| format!("`{s}` isn't an integer"))?;
 
-    #[test]
-    fn start_of_period() {
-        let payments = vec![
-            Payment::new("Phone".to_owned(), Decimal::new(1000, 2), 28),
-            Payment::new("Water".to_owned(), Decimal::new(2000, 2), 3),
-        ];
-
-        let payment_manager = PaymentManager::new(Decimal::new(10000, 2), 18, payments);
-
-        let remaining =
-            payment_manager.remaining_balance(NaiveDate::from_str("2023-01-19").unwrap());
-        assert_eq!(remaining, Decimal::new(7000, 2));
+    if DAYS_PAID_RANGE.contains(&days_paid) {
+        Ok(days_paid)
+    } else {
+        Err(format!(
+            "days paid not in range {}-{}",
+            DAYS_PAID_RANGE.start(),
+            DAYS_PAID_RANGE.end()
+        ))
     }
+}
 
-    #[test]
-    fn midway_through() {
-        let payments = vec![
-            Payment::new("Phone".to_owned(), Decimal::new(1000, 2), 28),
-            Payment::new("Water".to_owned(), Decimal::new(2000, 2), 3),
-        ];
+fn amount_validation(s: &str) -> Result<Decimal, String> {
+    let amount: Decimal = s.parse().map_err(|_| format!("`{s}` isn't a Decimal"))?;
 
-        let payment_manager = PaymentManager::new(Decimal::new(10000, 2), 18, payments);
-
-        let remaining =
-            payment_manager.remaining_balance(NaiveDate::from_str("2023-01-01").unwrap());
-        assert_eq!(remaining, Decimal::new(8000, 2));
+    if amount > Decimal::new(0, 2) {
+        Ok(amount)
+    } else {
+        Err("amount not greater than zero".to_string())
     }
+}
 
-    #[test]
-    fn same_day() {
-        let payments = vec![
-            Payment::new("Phone".to_owned(), Decimal::new(1000, 2), 28),
-            Payment::new("Water".to_owned(), Decimal::new(2000, 2), 3),
-        ];
-
-        let payment_manager = PaymentManager::new(Decimal::new(10000, 2), 18, payments);
-
-        let remaining =
-            payment_manager.remaining_balance(NaiveDate::from_str("2023-01-28").unwrap());
-        assert_eq!(remaining, Decimal::new(8000, 2));
+fn adjust_entry(args: &AdjustArgs, mut payments: Payments) -> anyhow::Result<Payments> {
+    for payment in payments.iter_mut() {
+        if payment.name != args.name {
+            continue;
+        }
+        if let Some(a) = args.amount {
+            payment.amount = a;
+        }
+        if let Some(d) = args.day_paid {
+            payment.day_paid = d;
+        }
+        return Ok(payments);
     }
+    Err(anyhow!("{} not found", args.name))
+}
 
-    #[test]
-    fn end_of_month() {
-        let payments = vec![
-            Payment::new("Phone".to_owned(), Decimal::new(1000, 2), 28),
-            Payment::new("Water".to_owned(), Decimal::new(2000, 2), 3),
-        ];
-        let payment_manager = PaymentManager::new(Decimal::new(10000, 2), 18, payments);
+fn main() -> anyhow::Result<()> {
+    let args = App::parse();
 
-        let remaining =
-            payment_manager.remaining_balance(NaiveDate::from_str("2023-01-31").unwrap());
+    let payments = payments_from_file(FILE_NAME)?;
 
-        assert_eq!(remaining, Decimal::new(8000, 2));
-    }
-
-    #[test]
-    fn reset_day() {
-        let payments = vec![
-            Payment::new("Phone".to_owned(), Decimal::new(1000, 2), 28),
-            Payment::new("Water".to_owned(), Decimal::new(2000, 2), 3),
-        ];
-        let payment_manager = PaymentManager::new(Decimal::new(10000, 2), 18, payments);
-
-        let remaining =
-            payment_manager.remaining_balance(NaiveDate::from_str("2023-01-18").unwrap());
-
-        assert_eq!(remaining, Decimal::new(7000, 2));
+    match &args.command {
+        Commands::Compute { balance } => {
+            let balance = compute_balance(*balance, payments);
+            println!("£{}", balance);
+            Ok(())
+        }
+        Commands::Adjust(args) => {
+            let payments = adjust_entry(args, payments)?;
+            payments_to_file(FILE_NAME, &payments)
+        }
     }
 }
