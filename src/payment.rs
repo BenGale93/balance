@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::utils;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Payment {
     pub name: String,
     pub amount: Decimal,
@@ -35,6 +35,26 @@ impl Display for Payment {
     }
 }
 
+impl PartialEq for Payment {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
+}
+
+impl Eq for Payment {}
+
+impl PartialOrd for Payment {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.name.partial_cmp(&other.name)
+    }
+}
+
+impl Ord for Payment {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.name.cmp(&other.name)
+    }
+}
+
 pub type Payments = Vec<Payment>;
 
 pub fn payments_from_file<P: AsRef<Path>>(filepath: P) -> Result<Payments> {
@@ -49,7 +69,7 @@ pub fn payments_to_file<P: AsRef<Path>>(filepath: P, payments: &Payments) -> Res
     Ok(())
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PaymentManager {
     balance: Decimal,
     reset_day: isize,
@@ -160,5 +180,22 @@ mod tests {
             payment_manager.remaining_balance(NaiveDate::from_str("2023-01-18").unwrap());
 
         assert_eq!(remaining, Decimal::new(7000, 2));
+    }
+
+    #[test]
+    fn payments_are_sorted() {
+        let mut payments = vec![
+            Payment::new("Water".to_owned(), Decimal::new(2000, 2), 3),
+            Payment::new("Phone".to_owned(), Decimal::new(1000, 2), 28),
+        ];
+        payments.sort();
+
+        assert_eq!(
+            payments,
+            vec![
+                Payment::new("Phone".to_owned(), Decimal::new(1000, 2), 28),
+                Payment::new("Water".to_owned(), Decimal::new(2000, 2), 3),
+            ]
+        );
     }
 }

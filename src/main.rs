@@ -97,7 +97,8 @@ struct ListArgs {
     day_paid: bool,
 }
 
-fn list_payments(args: &ListArgs, payments: &Payments) {
+fn list_payments(args: &ListArgs, payments: &mut Payments) {
+    payments.sort();
     for payment in payments {
         let ListArgs { amount, day_paid } = args;
         let output = match (amount, day_paid) {
@@ -119,7 +120,7 @@ fn list_payments(args: &ListArgs, payments: &Payments) {
 fn main() -> anyhow::Result<()> {
     let args = App::parse();
 
-    let payments = payments_from_file(FILE_NAME)?;
+    let mut payments = payments_from_file(FILE_NAME)?;
 
     match &args.command {
         Commands::Compute { balance } => {
@@ -132,7 +133,7 @@ fn main() -> anyhow::Result<()> {
             payments_to_file(FILE_NAME, &payments)
         }
         Commands::List(args) => {
-            list_payments(args, &payments);
+            list_payments(args, &mut payments);
             Ok(())
         }
     }
