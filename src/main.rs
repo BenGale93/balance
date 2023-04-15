@@ -25,6 +25,7 @@ struct App {
 enum Commands {
     Compute { balance: Decimal },
     Adjust(AdjustArgs),
+    List(ListArgs),
 }
 
 fn compute_balance(balance: Decimal, payments: Payments) -> Decimal {
@@ -88,6 +89,33 @@ fn adjust_entry(args: &AdjustArgs, mut payments: Payments) -> anyhow::Result<Pay
     Err(anyhow!("{} not found", args.name))
 }
 
+#[derive(Args)]
+struct ListArgs {
+    #[arg(short, long)]
+    amount: bool,
+    #[arg(short, long)]
+    day_paid: bool,
+}
+
+fn list_payments(args: &ListArgs, payments: &Payments) {
+    for payment in payments {
+        let ListArgs { amount, day_paid } = args;
+        let output = match (amount, day_paid) {
+            (true, true) => {
+                format!(
+                    "{} £{}, day paid: {}",
+                    payment.name, payment.amount, payment.day_paid
+                )
+            }
+            (true, false) => format!("{} £{}", payment.name, payment.amount),
+            (false, true) => format!("{}, day_paid: {}", payment.name, payment.day_paid),
+            (false, false) => payment.name.clone(),
+        };
+
+        println!("{output}");
+    }
+}
+
 fn main() -> anyhow::Result<()> {
     let args = App::parse();
 
@@ -102,6 +130,10 @@ fn main() -> anyhow::Result<()> {
         Commands::Adjust(args) => {
             let payments = adjust_entry(args, payments)?;
             payments_to_file(FILE_NAME, &payments)
+        }
+        Commands::List(args) => {
+            list_payments(args, &payments);
+            Ok(())
         }
     }
 }
