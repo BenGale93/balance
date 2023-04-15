@@ -68,7 +68,7 @@ impl PaymentManager {
     pub fn remaining_balance(&self, current_day: NaiveDate) -> Decimal {
         let rd = self.reset_day;
         let day = current_day.day() as isize;
-        let days_in_month = utils::days_in_month(current_day.month());
+        let days_in_month = utils::days_in_month(current_day);
 
         let rebased_cd = utils::modulo(day - rd, days_in_month);
 
