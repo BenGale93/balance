@@ -99,8 +99,8 @@ struct ListArgs {
 
 fn list_payments(args: &ListArgs, payments: &mut Payments) {
     payments.sort();
+    let ListArgs { amount, day_paid } = args;
     for payment in payments {
-        let ListArgs { amount, day_paid } = args;
         let output = match (amount, day_paid) {
             (true, true) => {
                 format!(
