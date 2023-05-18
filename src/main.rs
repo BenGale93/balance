@@ -120,7 +120,9 @@ fn list_payments(args: &ListArgs, payments: &mut Payments) {
 fn main() -> anyhow::Result<()> {
     let args = App::parse();
 
-    let mut payments = payments_from_file(FILE_NAME)?;
+    let spend_file = std::env::current_exe()?.parent().unwrap().join(FILE_NAME);
+
+    let mut payments = payments_from_file(&spend_file)?;
 
     match &args.command {
         Commands::Compute { balance } => {
@@ -130,7 +132,7 @@ fn main() -> anyhow::Result<()> {
         }
         Commands::Adjust(args) => {
             let payments = adjust_entry(args, payments)?;
-            payments_to_file(FILE_NAME, &payments)
+            payments_to_file(spend_file, &payments)
         }
         Commands::List(args) => {
             list_payments(args, &mut payments);
