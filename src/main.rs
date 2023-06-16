@@ -74,10 +74,10 @@ fn days_paid_in_range(s: &str) -> Result<isize, String> {
 fn amount_validation(s: &str) -> Result<Decimal, String> {
     let amount: Decimal = s.parse().map_err(|_| format!("`{s}` isn't a Decimal"))?;
 
-    if amount > Decimal::new(0, 2) {
+    if amount >= Decimal::new(0, 2) {
         Ok(amount)
     } else {
-        Err("amount not greater than zero".to_string())
+        Err("amount not greater than or equal to zero".to_string())
     }
 }
 
