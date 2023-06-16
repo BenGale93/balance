@@ -23,15 +23,23 @@ struct App {
 
 #[derive(Subcommand)]
 enum Commands {
-    Compute { balance: Decimal },
+    Compute(ComputeArgs),
     Adjust(AdjustArgs),
     List(ListArgs),
 }
 
-fn compute_balance(balance: Decimal, payments: Payments) -> Decimal {
-    let reset_day: isize = 18;
+#[derive(Args)]
+struct ComputeArgs {
+    balance: Decimal,
+    #[arg(short, long)]
+    reset_day: Option<isize>,
+}
 
-    let payment_manager = PaymentManager::new(balance, reset_day, payments);
+fn compute_balance(args: &ComputeArgs, payments: Payments) -> Decimal {
+    let ComputeArgs { balance, reset_day } = args;
+    let reset_day = reset_day.unwrap_or_else(|| 18);
+
+    let payment_manager = PaymentManager::new(*balance, reset_day, payments);
 
     let current_day = chrono::Utc::now().date_naive();
 
@@ -125,8 +133,8 @@ fn main() -> anyhow::Result<()> {
     let mut payments = payments_from_file(&spend_file)?;
 
     match &args.command {
-        Commands::Compute { balance } => {
-            let balance = compute_balance(*balance, payments);
+        Commands::Compute(args) => {
+            let balance = compute_balance(args, payments);
             println!("£{}", balance);
             Ok(())
         }
