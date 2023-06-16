@@ -31,15 +31,14 @@ enum Commands {
 #[derive(Args)]
 struct ComputeArgs {
     balance: Decimal,
-    #[arg(short, long)]
-    reset_day: Option<isize>,
+    #[arg(short, long, default_value_t = 18)]
+    reset_day: isize,
 }
 
 fn compute_balance(args: &ComputeArgs, payments: Payments) -> Decimal {
     let ComputeArgs { balance, reset_day } = args;
-    let reset_day = reset_day.unwrap_or_else(|| 18);
 
-    let payment_manager = PaymentManager::new(*balance, reset_day, payments);
+    let payment_manager = PaymentManager::new(*balance, *reset_day, payments);
 
     let current_day = chrono::Utc::now().date_naive();
 
