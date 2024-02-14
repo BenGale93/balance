@@ -16,13 +16,14 @@ You will then be able to run the program using the `balance` command.
 
 ## Setup
 
-You need to place a `spend.yml` file in `~/.cargo/bin/` and it should look like
+You need to place a `spend.yml` file in `~/.config/balance/` and it should look like
 below. Include all your regular bills.
 
 ```yaml
-- name: Gas # Name of the bill
-  amount: '20' # Amount the bill will be
-  day_paid: 6 # Day of the month the bill generally is paid out
+payments:
+  - name: Gas # Name of the bill
+    amount: '20' # Amount the bill will be
+    day_paid: 6 # Day of the month the bill generally is paid out
 ```
 
 ## Example

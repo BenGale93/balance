@@ -1,4 +1,4 @@
-use std::{fmt::Display, path::Path};
+use std::fmt::Display;
 
 use anyhow::Result;
 use chrono::{Datelike, NaiveDate};
@@ -6,6 +6,8 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::utils;
+
+const FILE_NAME: &str = "spend";
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Payment {
@@ -57,15 +59,19 @@ impl Ord for Payment {
 
 pub type Payments = Vec<Payment>;
 
-pub fn payments_from_file<P: AsRef<Path>>(filepath: P) -> Result<Payments> {
-    let payments = std::fs::read_to_string(filepath)?;
-    let payments = serde_yaml::from_str(&payments)?;
-    Ok(payments)
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct Config {
+    pub payments: Payments,
 }
 
-pub fn payments_to_file<P: AsRef<Path>>(filepath: P, payments: &Payments) -> Result<()> {
-    let yaml = serde_yaml::to_string(&payments)?;
-    std::fs::write(filepath, yaml)?;
+pub fn get_config() -> Result<Config> {
+    let config: Config = confy::load("balance", Some(FILE_NAME))?;
+
+    Ok(config)
+}
+
+pub fn store_config(config: &Config) -> Result<()> {
+    confy::store("balance", Some(FILE_NAME), config)?;
     Ok(())
 }
 

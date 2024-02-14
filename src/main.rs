@@ -3,7 +3,7 @@
 use std::ops::RangeInclusive;
 
 use clap::{Args, Parser, Subcommand};
-use payment::{payments_to_file, Payments};
+use payment::{store_config, Payments};
 use rust_decimal::Decimal;
 
 mod payment;
@@ -11,9 +11,7 @@ mod utils;
 
 use anyhow::anyhow;
 
-use crate::payment::{payments_from_file, PaymentManager};
-
-const FILE_NAME: &str = "spend.yml";
+use crate::payment::{get_config, PaymentManager};
 
 #[derive(Parser)]
 struct App {
@@ -137,22 +135,21 @@ fn list_payments(args: &ListArgs, payments: &mut Payments) {
 fn main() -> anyhow::Result<()> {
     let args = App::parse();
 
-    let spend_file = std::env::current_exe()?.parent().unwrap().join(FILE_NAME);
-
-    let mut payments = payments_from_file(&spend_file)?;
+    let mut config = get_config()?;
 
     match &args.command {
         Commands::Compute(args) => {
-            let balance = compute_balance(args, payments);
+            let balance = compute_balance(args, config.payments);
             println!("£{}", balance);
             Ok(())
         }
         Commands::Adjust(args) => {
-            let payments = adjust_entry(args, payments)?;
-            payments_to_file(spend_file, &payments)
+            let payments = adjust_entry(args, config.payments)?;
+            config.payments = payments;
+            store_config(&config)
         }
         Commands::List(args) => {
-            list_payments(args, &mut payments);
+            list_payments(args, &mut config.payments);
             Ok(())
         }
     }
