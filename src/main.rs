@@ -23,14 +23,19 @@ struct App {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// For computing the balance at the given reset date.
     Compute(ComputeArgs),
+    /// For adjusting a bill.
     Adjust(AdjustArgs),
+    /// For listing all the bills.
     List(ListArgs),
 }
 
 #[derive(Args)]
 struct ComputeArgs {
+    /// Current balance of your account.
     balance: Decimal,
+    /// Day your bill cycle resets, normally pay day. Defaults to 18 as that is the author's pay day.
     #[arg(short, long, default_value_t = 18)]
     reset_day: isize,
 }
@@ -47,9 +52,12 @@ fn compute_balance(args: &ComputeArgs, payments: Payments) -> Decimal {
 
 #[derive(Args)]
 struct AdjustArgs {
+    /// Bill item to adjust.
     name: String,
+    /// New bill amount.
     #[arg(short, long, value_parser = amount_validation)]
     amount: Option<Decimal>,
+    /// New day that the bill is paid on.
     #[arg(short, long, value_parser = days_paid_in_range)]
     day_paid: Option<isize>,
 }
@@ -98,8 +106,10 @@ fn adjust_entry(args: &AdjustArgs, mut payments: Payments) -> anyhow::Result<Pay
 
 #[derive(Args)]
 struct ListArgs {
+    /// Whether to include the bill amount in the output.
     #[arg(short, long)]
     amount: bool,
+    /// Whether to include the day the bill is paid in the output.
     #[arg(short, long)]
     day_paid: bool,
 }
