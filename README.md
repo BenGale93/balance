@@ -47,3 +47,11 @@ computing your balance, update the bill like so:
 ```bash
 $ balance adjust "Credit Card" -a 454.23
 ```
+
+### Editing
+
+You can edit the entire config file in your favourite text editor by running:
+
+```bash
+$ balance edit
+```
