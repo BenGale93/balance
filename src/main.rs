@@ -3,7 +3,7 @@
 use std::ops::RangeInclusive;
 
 use clap::{Args, Parser, Subcommand};
-use payment::{store_config, Payments};
+use payment::{edit_config, store_config, Payments};
 use rust_decimal::Decimal;
 
 mod payment;
@@ -27,6 +27,8 @@ enum Commands {
     Adjust(AdjustArgs),
     /// For listing all the bills.
     List(ListArgs),
+    /// For editing the bill config.
+    Edit(EditArgs),
 }
 
 #[derive(Args)]
@@ -132,6 +134,9 @@ fn list_payments(args: &ListArgs, payments: &mut Payments) {
     }
 }
 
+#[derive(Args)]
+struct EditArgs {}
+
 fn main() -> anyhow::Result<()> {
     let args = App::parse();
 
@@ -152,5 +157,6 @@ fn main() -> anyhow::Result<()> {
             list_payments(args, &mut config.payments);
             Ok(())
         }
+        Commands::Edit(_) => edit_config(),
     }
 }

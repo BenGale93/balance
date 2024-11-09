@@ -13,3 +13,4 @@ rust_decimal = { version = "1.29.1", features = ["serde"] }
 anyhow = "1.0.69"
 clap = { version = "4.2.1", features = ["derive"] }
 confy = { version = "0.6.0", default-features = false, features = ["yaml_conf"] }
+edit = "0.1.5"

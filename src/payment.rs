@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::utils;
 
 const FILE_NAME: &str = "spend";
+const APP_NAME: &str = "balance";
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Payment {
@@ -65,13 +66,21 @@ pub struct Config {
 }
 
 pub fn get_config() -> Result<Config> {
-    let config: Config = confy::load("balance", Some(FILE_NAME))?;
+    let config: Config = confy::load(APP_NAME, Some(FILE_NAME))?;
 
     Ok(config)
 }
 
 pub fn store_config(config: &Config) -> Result<()> {
-    confy::store("balance", Some(FILE_NAME), config)?;
+    confy::store(APP_NAME, Some(FILE_NAME), config)?;
+    Ok(())
+}
+
+pub fn edit_config() -> Result<()> {
+    edit::edit_file(confy::get_configuration_file_path(
+        APP_NAME,
+        Some(FILE_NAME),
+    )?)?;
     Ok(())
 }
 
@@ -83,7 +92,7 @@ pub struct PaymentManager {
 }
 
 impl PaymentManager {
-    pub fn new(balance: Decimal, reset_day: isize, payments: Payments) -> Self {
+    pub const fn new(balance: Decimal, reset_day: isize, payments: Payments) -> Self {
         Self {
             balance,
             reset_day,
