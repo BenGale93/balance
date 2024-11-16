@@ -47,7 +47,7 @@ fn compute_balance(args: &ComputeArgs, payments: Payments) -> Decimal {
 
     let current_day = chrono::Utc::now().date_naive();
 
-    payment_manager.remaining_balance(current_day)
+    payment_manager.remaining_balance(&current_day)
 }
 
 #[derive(Args)]

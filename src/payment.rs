@@ -100,7 +100,7 @@ impl PaymentManager {
         }
     }
 
-    pub fn remaining_balance(&self, current_day: NaiveDate) -> Decimal {
+    pub fn remaining_balance(&self, current_day: &NaiveDate) -> Decimal {
         let rd = self.reset_day;
         let day = current_day.day() as isize;
         let days_in_month = utils::days_in_month(current_day);
@@ -137,7 +137,7 @@ mod tests {
         let payment_manager = PaymentManager::new(Decimal::new(10000, 2), 18, payments);
 
         let remaining =
-            payment_manager.remaining_balance(NaiveDate::from_str("2023-01-19").unwrap());
+            payment_manager.remaining_balance(&NaiveDate::from_str("2023-01-19").unwrap());
         assert_eq!(remaining, Decimal::new(7000, 2));
     }
 
@@ -151,7 +151,7 @@ mod tests {
         let payment_manager = PaymentManager::new(Decimal::new(10000, 2), 18, payments);
 
         let remaining =
-            payment_manager.remaining_balance(NaiveDate::from_str("2023-01-01").unwrap());
+            payment_manager.remaining_balance(&NaiveDate::from_str("2023-01-01").unwrap());
         assert_eq!(remaining, Decimal::new(8000, 2));
     }
 
@@ -165,7 +165,7 @@ mod tests {
         let payment_manager = PaymentManager::new(Decimal::new(10000, 2), 18, payments);
 
         let remaining =
-            payment_manager.remaining_balance(NaiveDate::from_str("2023-01-28").unwrap());
+            payment_manager.remaining_balance(&NaiveDate::from_str("2023-01-28").unwrap());
         assert_eq!(remaining, Decimal::new(8000, 2));
     }
 
@@ -178,7 +178,7 @@ mod tests {
         let payment_manager = PaymentManager::new(Decimal::new(10000, 2), 18, payments);
 
         let remaining =
-            payment_manager.remaining_balance(NaiveDate::from_str("2023-01-31").unwrap());
+            payment_manager.remaining_balance(&NaiveDate::from_str("2023-01-31").unwrap());
 
         assert_eq!(remaining, Decimal::new(8000, 2));
     }
@@ -192,7 +192,7 @@ mod tests {
         let payment_manager = PaymentManager::new(Decimal::new(10000, 2), 18, payments);
 
         let remaining =
-            payment_manager.remaining_balance(NaiveDate::from_str("2023-01-18").unwrap());
+            payment_manager.remaining_balance(&NaiveDate::from_str("2023-01-18").unwrap());
 
         assert_eq!(remaining, Decimal::new(7000, 2));
     }
